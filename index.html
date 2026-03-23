@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Constitution Assistant</title>
+    <style>
+        :root {
+            --bg: #f3efe6;
+            --panel: #fcfaf5;
+            --panel-strong: #f6f0e4;
+            --ink: #1f1d1a;
+            --muted: #6f675d;
+            --line: #d7ccbb;
+            --accent: #9f2f1f;
+            --accent-dark: #6f1b10;
+            --accent-soft: #f3d7c8;
+            --viewer: #d8d1c4;
+            --shadow: 0 18px 50px rgba(61, 42, 20, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            height: 100vh;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(159, 47, 31, 0.14), transparent 28%),
+                linear-gradient(180deg, #efe6d6 0%, var(--bg) 45%, #e7dece 100%);
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .shell {
+            max-width: 1600px;
+            margin: 0 auto;
+            height: calc(100vh - 40px);
+            display: grid;
+            grid-template-columns: 560px 1fr;
+            background: rgba(252, 250, 245, 0.92);
+            border: 1px solid rgba(130, 108, 79, 0.18);
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+        }
+
+        .chat-panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            border-right: 1px solid var(--line);
+            background:
+                linear-gradient(180deg, rgba(246, 240, 228, 0.95), rgba(252, 250, 245, 0.98));
+        }
+
+        .viewer-panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            background: linear-gradient(180deg, #e9e0cf 0%, #ddd4c5 100%);
+        }
+
+        .hero {
+            padding: 24px 28px 18px;
+            background:
+                linear-gradient(135deg, rgba(159, 47, 31, 0.98), rgba(111, 27, 16, 0.96));
+            color: #fff7f1;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            margin-bottom: 14px;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 247, 241, 0.35);
+            border-radius: 999px;
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .hero h1 {
+            font-size: 30px;
+            line-height: 1.05;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            font-size: 14px;
+            line-height: 1.5;
+            color: rgba(255, 247, 241, 0.88);
+        }
+
+        .meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        .meta-chip {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 247, 241, 0.12);
+            border: 1px solid rgba(255, 247, 241, 0.2);
+            font-size: 12px;
+        }
+
+        .chat-container {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 18px 20px;
+        }
+
+        .chat-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(252, 250, 245, 0.88);
+        }
+
+        .toolbar-label {
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .api-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: #fffdf8;
+            font-size: 12px;
+            color: var(--ink);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #c2410c;
+            box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.14);
+        }
+
+        .status-dot.live {
+            background: #15803d;
+            box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15);
+        }
+
+        .clear-button {
+            border: 1px solid var(--line);
+            background: transparent;
+            color: var(--muted);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+        }
+
+        .clear-button:hover {
+            background: #f6f0e4;
+            color: var(--ink);
+            border-color: #c9b9a2;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            animation: rise 0.25s ease-out;
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message-content {
+            display: inline-block;
+            max-width: 94%;
+            padding: 16px 18px;
+            border-radius: 16px;
+            text-align: left;
+            line-height: 1.55;
+            word-break: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #fff8f4;
+            border-bottom-right-radius: 6px;
+        }
+
+        .message.assistant .message-content {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 8px 18px rgba(90, 68, 43, 0.06);
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .page-badge {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: var(--accent-dark);
+            font-weight: 700;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            margin: 0 24px 18px;
+            padding: 12px 14px;
+            width: fit-content;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-right: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: pulse 1.2s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.3s; margin-right: 0; }
+
+        .input-bar {
+            padding: 16px 20px 20px;
+            border-top: 1px solid var(--line);
+            background: rgba(252, 250, 245, 0.96);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        #queryInput {
+            flex: 1;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: #fffdf8;
+            padding: 20px 20px;
+            font: inherit;
+            font-size: 17px;
+            color: var(--ink);
+            outline: none;
+        }
+
+        #queryInput:focus {
+            border-color: rgba(159, 47, 31, 0.55);
+            box-shadow: 0 0 0 4px rgba(159, 47, 31, 0.1);
+        }
+
+        #sendButton {
+            min-width: 118px;
+            border: none;
+            border-radius: 16px;
+            padding: 0 24px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #fff8f4;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+            box-shadow: 0 12px 24px rgba(111, 27, 16, 0.18);
+        }
+
+        #sendButton:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        #sendButton:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .viewer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 22px;
+            background: rgba(32, 27, 21, 0.9);
+            color: #f8f1e4;
+        }
+
+        .viewer-title h2 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .viewer-title p {
+            font-size: 13px;
+            color: rgba(248, 241, 228, 0.72);
+        }
+
+        .page-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .page-jump {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-jump label {
+            font-size: 13px;
+            color: rgba(248, 241, 228, 0.76);
+        }
+
+        #pageJumpInput {
+            width: 84px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(248, 241, 228, 0.22);
+            background: rgba(248, 241, 228, 0.08);
+            color: #f8f1e4;
+            font: inherit;
+            text-align: center;
+            outline: none;
+        }
+
+        #pageJumpInput::placeholder {
+            color: rgba(248, 241, 228, 0.45);
+        }
+
+        #pageJumpInput::-webkit-outer-spin-button,
+        #pageJumpInput::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        #pageJumpInput[type="text"] {
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+
+        #pageJumpInput:focus {
+            border-color: rgba(248, 241, 228, 0.45);
+            box-shadow: 0 0 0 3px rgba(248, 241, 228, 0.08);
+        }
+
+        #pageJumpButton {
+            border: 1px solid rgba(248, 241, 228, 0.22);
+            background: rgba(248, 241, 228, 0.16);
+            color: #f8f1e4;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .page-info {
+            min-width: 120px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .page-btn {
+            border: 1px solid rgba(248, 241, 228, 0.22);
+            background: rgba(248, 241, 228, 0.1);
+            color: #f8f1e4;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .viewer-note {
+            padding: 10px 18px;
+            background: rgba(255, 250, 241, 0.7);
+            border-bottom: 1px solid rgba(130, 108, 79, 0.16);
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .pdf-viewer {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            padding: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background:
+                linear-gradient(180deg, rgba(109, 95, 74, 0.08), rgba(109, 95, 74, 0.02)),
+                var(--viewer);
+        }
+
+        #pdfCanvas {
+            max-width: 120%;
+            height: auto;
+            background: white;
+            box-shadow: 0 12px 32px rgba(52, 42, 31, 0.18);
+        }
+
+        .error-message {
+            margin: 0 24px 16px;
+            padding: 12px 14px;
+            background: #fff0eb;
+            border: 1px solid #efc2b6;
+            color: #8b2e1f;
+            border-radius: 12px;
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 80%, 100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+            40% {
+                transform: translateY(-4px);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 1180px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .chat-panel {
+                border-right: none;
+                border-bottom: 1px solid var(--line);
+            }
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 12px;
+            }
+
+            .shell {
+                min-height: calc(100vh - 24px);
+                border-radius: 22px;
+            }
+
+            .hero h1 {
+                font-size: 28px;
+            }
+
+            .input-row {
+                flex-direction: column;
+            }
+
+            #sendButton {
+                min-height: 52px;
+            }
+
+            .viewer-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="chat-panel">
+            <div class="hero">
+                <span class="eyebrow">Indian Constitution RAG</span>
+                <h1>Ask the Constitution</h1>
+                <p>
+                    Search the preloaded Constitution, get grounded answers, and jump straight to the cited page.
+                </p>
+                <div class="meta">
+                    <span class="meta-chip">Preloaded source document</span>
+                    <span class="meta-chip">Page-linked answers</span>
+                    <span class="meta-chip">FastAPI backend</span>
+                </div>
+            </div>
+
+            <div class="chat-toolbar">
+                <span class="toolbar-label">Conversation</span>
+                <div class="api-status" id="apiStatus">
+                    <span class="status-dot" id="apiStatusDot"></span>
+                    <span id="apiStatusText">API offline</span>
+                </div>
+                <button class="clear-button" id="clearChatButton" type="button">Clear chat</button>
+            </div>
+
+            <div class="chat-container" id="chatContainer">
+                <div class="message assistant intro-message">
+                    <div class="message-content">
+                        <div class="message-header">
+                            <strong>Assistant</strong>
+                        </div>
+                        The Constitution PDF is already loaded. Ask about an article, schedule, amendment note, or any concept and I will return an answer with the most relevant page.
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <span></span><span></span><span></span>
+            </div>
+
+            <div class="input-bar">
+                <div class="input-row">
+                    <input
+                        type="text"
+                        id="queryInput"
+                        placeholder="Try: Explain Article 14 in simple terms"
+                        autocomplete="off"
+                    />
+                    <button id="sendButton">Ask</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="viewer-panel">
+            <div class="viewer-header">
+                <div class="viewer-title">
+                    <h2>Constitution Viewer</h2>
+                    <p id="documentStatus">Loading preloaded PDF...</p>
+                </div>
+                <div class="page-controls">
+                    <div class="page-jump">
+                        <label for="pageJumpInput">Go to</label>
+                        <input
+                            type="text"
+                            id="pageJumpInput"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="Page"
+                        />
+                        <button id="pageJumpButton" type="button">Go</button>
+                    </div>
+                    <button class="page-btn" id="prevPage" disabled>Previous</button>
+                    <div class="page-info">
+                        Page <span id="currentPage">1</span> of <span id="totalPages">-</span>
+                    </div>
+                    <button class="page-btn" id="nextPage" disabled>Next</button>
+                </div>
+            </div>
+
+            <div class="viewer-note">
+                The viewer opens to the page returned by the backend after each answer.
+            </div>
+
+            <div class="pdf-viewer">
+                <canvas id="pdfCanvas"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <script src="./config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        const API_URL =
+            (window.APP_CONFIG && window.APP_CONFIG.API_URL) ||
+            (
+                window.location.protocol === "file:" ||
+                ["localhost", "127.0.0.1"].includes(window.location.hostname)
+            ? "http://127.0.0.1:8000"
+            : "");
+        const PDF_URL = `${API_URL}/constitution-pdf`;
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+        let pdfDoc = null;
+        let currentPage = 1;
+        let pageRendering = false;
+        let pageNumPending = null;
+        let wheelDeltaAccumulator = 0;
+        let lastWheelPageTurnAt = 0;
+        let pendingViewerScrollPosition = null;
+
+        const chatContainer = document.getElementById("chatContainer");
+        const queryInput = document.getElementById("queryInput");
+        const sendButton = document.getElementById("sendButton");
+        const pdfViewer = document.querySelector(".pdf-viewer");
+        const canvas = document.getElementById("pdfCanvas");
+        const ctx = canvas.getContext("2d");
+        const currentPageSpan = document.getElementById("currentPage");
+        const totalPagesSpan = document.getElementById("totalPages");
+        const prevPageBtn = document.getElementById("prevPage");
+        const nextPageBtn = document.getElementById("nextPage");
+        const pageJumpInput = document.getElementById("pageJumpInput");
+        const pageJumpButton = document.getElementById("pageJumpButton");
+        const typingIndicator = document.getElementById("typingIndicator");
+        const documentStatus = document.getElementById("documentStatus");
+        const apiStatusText = document.getElementById("apiStatusText");
+        const apiStatusDot = document.getElementById("apiStatusDot");
+        const clearChatButton = document.getElementById("clearChatButton");
+
+        sendButton.addEventListener("click", sendQuery);
+        queryInput.addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                sendQuery();
+            }
+        });
+        prevPageBtn.addEventListener("click", () => changePage(-1));
+        nextPageBtn.addEventListener("click", () => changePage(1));
+        pdfViewer.addEventListener("wheel", handleViewerWheel, { passive: false });
+        pageJumpButton.addEventListener("click", jumpToTypedPage);
+        pageJumpInput.addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                jumpToTypedPage();
+            }
+        });
+        pageJumpInput.addEventListener("input", () => {
+            pageJumpInput.value = pageJumpInput.value.replace(/\D/g, "");
+        });
+        clearChatButton.addEventListener("click", clearChatHistory);
+
+        checkAPIHealth();
+        loadPreloadedPdf();
+        setInterval(checkAPIHealth, 10000);
+
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                setApiStatus(true);
+            } catch (error) {
+                setApiStatus(false);
+                showError("Could not reach the API. Start the FastAPI server and refresh this page.");
+            }
+        }
+
+        async function loadPreloadedPdf() {
+            try {
+                pdfDoc = await pdfjsLib.getDocument(PDF_URL).promise;
+                totalPagesSpan.textContent = pdfDoc.numPages;
+                documentStatus.textContent = "Preloaded Constitution PDF";
+                updatePageControls();
+                renderPage(1);
+            } catch (error) {
+                console.error("Failed to load PDF:", error);
+                documentStatus.textContent = "Failed to load preloaded PDF";
+                showError("The preloaded PDF could not be opened. Make sure the frontend is served from the project folder.");
+            }
+        }
+
+        async function renderPage(pageNumber) {
+            if (!pdfDoc) {
+                return;
+            }
+
+            pageRendering = true;
+
+            try {
+                const page = await pdfDoc.getPage(pageNumber);
+                const viewport = page.getViewport({ scale: 2});
+
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                await page.render({
+                    canvasContext: ctx,
+                    viewport
+                }).promise;
+
+                pageRendering = false;
+                currentPage = pageNumber;
+                currentPageSpan.textContent = pageNumber;
+                updatePageControls();
+                applyPendingViewerScrollPosition();
+
+                if (pageNumPending !== null) {
+                    const pending = pageNumPending;
+                    pageNumPending = null;
+                    renderPage(pending);
+                }
+            } catch (error) {
+                console.error("Error rendering page:", error);
+                pageRendering = false;
+            }
+        }
+
+        function queueRenderPage(pageNumber) {
+            if (pageRendering) {
+                pageNumPending = pageNumber;
+            } else {
+                renderPage(pageNumber);
+            }
+        }
+
+        function changePage(delta) {
+            if (!pdfDoc) {
+                return;
+            }
+
+            const nextPage = currentPage + delta;
+            if (nextPage < 1 || nextPage > pdfDoc.numPages) {
+                return;
+            }
+
+            pendingViewerScrollPosition = delta > 0 ? "top" : "bottom";
+            queueRenderPage(nextPage);
+        }
+
+        function handleViewerWheel(event) {
+            if (!pdfDoc || event.ctrlKey) {
+                return;
+            }
+
+            const now = Date.now();
+            if (now - lastWheelPageTurnAt < 220) {
+                return;
+            }
+
+            const scrollingDown = event.deltaY > 0;
+            const scrollingUp = event.deltaY < 0;
+            const atTop = pdfViewer.scrollTop <= 0;
+            const atBottom =
+                pdfViewer.scrollTop + pdfViewer.clientHeight >= pdfViewer.scrollHeight - 2;
+
+            if ((scrollingDown && !atBottom) || (scrollingUp && !atTop)) {
+                wheelDeltaAccumulator = 0;
+                return;
+            }
+
+            event.preventDefault();
+
+            wheelDeltaAccumulator += event.deltaY;
+
+            if (Math.abs(wheelDeltaAccumulator) < 60) {
+                return;
+            }
+
+            const direction = wheelDeltaAccumulator > 0 ? 1 : -1;
+            wheelDeltaAccumulator = 0;
+            lastWheelPageTurnAt = now;
+            changePage(direction);
+        }
+
+        function goToPage(pageNumber) {
+            const targetPage = parseInt(pageNumber, 10);
+            if (!pdfDoc || Number.isNaN(targetPage) || targetPage < 1 || targetPage > pdfDoc.numPages) {
+                return;
+            }
+
+            pendingViewerScrollPosition = "top";
+            queueRenderPage(targetPage);
+            pageJumpInput.value = targetPage;
+        }
+
+        function updatePageControls() {
+            prevPageBtn.disabled = !pdfDoc || currentPage <= 1;
+            nextPageBtn.disabled = !pdfDoc || currentPage >= pdfDoc.numPages;
+            pageJumpInput.disabled = !pdfDoc;
+            pageJumpButton.disabled = !pdfDoc;
+        }
+
+        function applyPendingViewerScrollPosition() {
+            if (!pendingViewerScrollPosition) {
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                pdfViewer.scrollTop =
+                    pendingViewerScrollPosition === "bottom" ? pdfViewer.scrollHeight : 0;
+                pendingViewerScrollPosition = null;
+            });
+        }
+
+        function jumpToTypedPage() {
+            const rawValue = pageJumpInput.value.replace(/\D/g, "");
+            pageJumpInput.value = rawValue;
+
+            const targetPage = parseInt(rawValue, 10);
+            if (!pdfDoc || Number.isNaN(targetPage) || targetPage < 1) {
+                return;
+            }
+
+            goToPage(targetPage);
+        }
+
+        function setApiStatus(isLive) {
+            apiStatusText.textContent = isLive ? "API live" : "API offline";
+            apiStatusDot.classList.toggle("live", isLive);
+        }
+
+        function clearChatHistory() {
+            const introMessage = chatContainer.querySelector(".intro-message");
+            chatContainer.innerHTML = "";
+            if (introMessage) {
+                chatContainer.appendChild(introMessage);
+            }
+        }
+
+        async function sendQuery() {
+            const query = queryInput.value.trim();
+            if (!query) {
+                return;
+            }
+
+            addMessage(query, "user");
+            queryInput.value = "";
+            sendButton.disabled = true;
+            queryInput.disabled = true;
+            typingIndicator.style.display = "block";
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                const response = await fetch(`${API_URL}/rag`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                typingIndicator.style.display = "none";
+                addMessage(data.answer, "assistant", data.page_number);
+
+                if (data.page_number) {
+                    setTimeout(() => goToPage(data.page_number), 350);
+                }
+            } catch (error) {
+                console.error("Query failed:", error);
+                typingIndicator.style.display = "none";
+                addMessage(
+                    "I hit an error while processing that question. Check that the API is running and try again.",
+                    "assistant",
+                    null,
+                    true
+                );
+            } finally {
+                sendButton.disabled = false;
+                queryInput.disabled = false;
+                queryInput.focus();
+            }
+        }
+
+        function addMessage(text, sender, pageNumber = null, isError = false) {
+            const messageDiv = document.createElement("div");
+            messageDiv.className = `message ${sender}`;
+
+            const contentDiv = document.createElement("div");
+            contentDiv.className = "message-content";
+
+            if (sender === "assistant") {
+                const headerDiv = document.createElement("div");
+                headerDiv.className = "message-header";
+                headerDiv.innerHTML = "<strong>Assistant</strong>";
+
+                if (pageNumber) {
+                    const badge = document.createElement("span");
+                    badge.className = "page-badge";
+                    badge.textContent = `Page ${pageNumber}`;
+                    headerDiv.appendChild(badge);
+                }
+
+                contentDiv.appendChild(headerDiv);
+            }
+
+            const textDiv = document.createElement("div");
+            textDiv.textContent = text;
+            contentDiv.appendChild(textDiv);
+
+            if (isError) {
+                contentDiv.style.background = "#fff0eb";
+                contentDiv.style.borderColor = "#efc2b6";
+            }
+
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement("div");
+            errorDiv.className = "error-message";
+            errorDiv.textContent = message;
+            chatContainer.prepend(errorDiv);
+
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+    </script>
+</body>
+</html>
