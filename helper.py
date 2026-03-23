@@ -6,7 +6,6 @@ from prompts import prompt
 from model_selection import get_llm, get_retriever
 from langchain_core.documents import Document
 import json
-from sentence_transformers import CrossEncoder
 
 def normalize_roman(text):
     ROMAN_MAP = {
@@ -219,6 +218,7 @@ _final_docs = None
 def get_reranker_model():
     global _reranker_model
     if _reranker_model is None:
+        from sentence_transformers import CrossEncoder
         _reranker_model = CrossEncoder(str(RERANKER_DIR))
     return _reranker_model
 
