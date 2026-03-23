@@ -11,7 +11,7 @@ import argparse
 from typing import Dict, Any
 import logging
 
-from model_selection import llm
+from model_selection import get_llm
 from helper import context_outputer
 from prompts import prompt_2
 
@@ -28,7 +28,7 @@ class RAGProcessor:
     
     def __init__(self):
         """Initialize the RAG processor with necessary components."""
-        self.llm = llm
+        self.llm = get_llm()
         self.prompt = prompt_2
         logger.info("RAG Processor initialized")
     

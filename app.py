@@ -8,7 +8,7 @@ import json
 import logging
 
 # Import RAG components
-from model_selection import llm
+from model_selection import get_llm
 from helper import context_outputer
 from prompts import prompt_2
 
@@ -89,7 +89,7 @@ def process_rag_query(query: str) -> Dict[str, Any]:
         logger.info("Context retrieved successfully")
         
         # Step 2: Create and invoke the chain
-        chain = prompt_2 | llm
+        chain = prompt_2 | get_llm()
         result = chain.invoke({
             "query": query,
             "context": context_final

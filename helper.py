@@ -1,8 +1,9 @@
 import re
 from difflib import get_close_matches
 import ast
+from pathlib import Path
 from prompts import prompt
-from model_selection import llm, embeddings, retriever
+from model_selection import get_llm, get_retriever
 from langchain_core.documents import Document
 import json
 from sentence_transformers import CrossEncoder
@@ -136,7 +137,7 @@ def parse_llm_output(content):
     return [] 
 
 def query_enhancer(query):
-    chain_1 = prompt | llm
+    chain_1 = prompt | get_llm()
     result = chain_1.invoke({"user_query": query})
     return parse_llm_output(result.content)
 
@@ -154,6 +155,7 @@ def load_docs(path="docs.json"):
 
 def context_from_query_list(query_list):
     context = set()
+    retriever = get_retriever()
 
     for query in query_list:
         results = retriever.invoke(query)
@@ -205,30 +207,47 @@ def direct_fetch(entities, final_docs):
 
     return results
 
-model = CrossEncoder("BAAI/bge-reranker-base")
+
+BASE_DIR = Path(__file__).resolve().parent
+RERANKER_DIR = BASE_DIR / "models" / "bge-reranker"
+DOCS_PATH = BASE_DIR / "docs.json"
+
+_reranker_model = None
+_final_docs = None
+
+
+def get_reranker_model():
+    global _reranker_model
+    if _reranker_model is None:
+        _reranker_model = CrossEncoder(str(RERANKER_DIR))
+    return _reranker_model
 
 def context_reranker(query, context):
-    
+    model = get_reranker_model()
     pairs = [[query, doc] for doc in context]
     scores = model.predict(pairs)
     ranked = sorted(zip(context, scores), key=lambda x: x[1], reverse=True)
     top_k = [doc for doc, _ in ranked[:3]]
     return(top_k)
 
-final_docs = load_docs("docs.json")
+
+def get_final_docs():
+    global _final_docs
+    if _final_docs is None:
+        _final_docs = load_docs(str(DOCS_PATH))
+    return _final_docs
 
 def context_outputer(query):
     route = embedded_or_not(query)
 
     context = str()
     if route["use_rag"]:
-        chain_1 = prompt | llm
         list_of_queries = query_enhancer(query)
         result = context_from_query_list(list_of_queries)
         return " ".join(context_reranker(query = query, context= result))
     else:
         entities = route['entities']
-        docs = direct_fetch(entities, final_docs)
+        docs = direct_fetch(entities, get_final_docs())
 
         context_parts = []
 
